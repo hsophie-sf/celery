@@ -51,13 +51,10 @@ class Pidbox(object):
         # i.e. kombu.exceptions.OperationalError and/or
         # kombu.exceptions.InconsistencyError
         except (OperationalError, InconsistencyError) as exc:
-            error('Updated Control command error: %r', exc, exc_info=True)
-            error(
-                '%s was raised with details: body: %s; message: %s',
-                exc.__class__.__name__, body, message)
-            info("Pidbox reset starting %r", self.node)
+            error('Updated Control command error: %r. Body: %s; Message: %s', exc, body, message, exc_info=True)
+            error("Info: Pidbox reset starting %r", self.node)
             self.reset()
-            info("Pidbox reset successful %r", self.node)
+            error("Info: Pidbox reset successful %r", self.node)
         except Exception as exc:
             error('Control command error: %r', exc, exc_info=True)
             self.reset()
@@ -76,9 +73,9 @@ class Pidbox(object):
 
     def reset(self):
         self.stop(self.c)
-        info("Pidbox stopped")
+        error("Info: Pidbox stopped %r", self.node)
         self.start(self.c)
-        info("Pidbox started")
+        error("Info: Pidbox started %r", self.node)
 
     def _close_channel(self, c):
         if self.node and self.node.channel:
