@@ -14,6 +14,7 @@ from case import Mock, mock, patch, skip
 from kombu import Connection
 from kombu.asynchronous import get_event_loop
 from kombu.common import QoS, ignore_errors
+from kombu.exceptions import OperationalError, InconsistencyError
 from kombu.transport.base import Message
 from kombu.transport.memory import Transport
 from kombu.utils.uuid import uuid
@@ -426,6 +427,26 @@ class test_Consumer(ConsumerCase):
 
         con.node = Mock()
         con.node.handle_message.side_effect = ValueError('foo')
+        con.on_message('foo', 'bar')
+        con.node.handle_message.assert_called_with('foo', 'bar')
+        con.reset.assert_called()
+
+    def test_pidbox_callback_handles_operational_and_inconsistency_errors(self):
+        c = self.NoopConsumer()
+        con = find_step(c, consumer.Control).box
+        con.node = Mock()
+        con.reset = Mock()
+
+        con.on_message('foo', 'bar')
+        con.node.handle_message.assert_called_with('foo', 'bar')
+
+        con.node = Mock()
+        con.node.handle_message.side_effect = OperationalError('foo')
+        con.on_message('foo', 'bar')
+        con.node.handle_message.assert_called_with('foo', 'bar')
+
+        con.node = Mock()
+        con.node.handle_message.side_effect = InconsistencyError('foo')
         con.on_message('foo', 'bar')
         con.node.handle_message.assert_called_with('foo', 'bar')
         con.reset.assert_called()
