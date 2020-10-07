@@ -5,6 +5,7 @@ import socket
 import threading
 
 from kombu.common import ignore_errors
+from kombu.exceptions import InconsistencyError, OperationalError
 from kombu.utils.encoding import safe_str
 
 from celery.utils.collections import AttributeDict
@@ -48,7 +49,18 @@ class Pidbox(object):
             error('No such control command: %s', exc)
         except Exception as exc:
             error('Control command error: %r', exc, exc_info=True)
+
+            # log details of errors that may be causing the issue, i.e. kombu.exceptions.OperationalError and/or kombu.exceptions.InconsistencyError
+            if exc.__class__ == OperationalError:
+                error(
+                    'OperationalError was raised with details: body: %s; message: %s',
+                    body, message)
+            elif exc.__class__ == InconsistencyError:
+                error('InconsistencyError was raised with details: body: %s; message: %s', body, message)
+
+            info("Pidbox reset starting %r", self.node)
             self.reset()
+            info("Pidbox reset successful %r", self.node)
 
     def start(self, c):
         self.node.channel = c.connection.channel()
@@ -64,7 +76,9 @@ class Pidbox(object):
 
     def reset(self):
         self.stop(self.c)
+        info("Pidbox stopped")
         self.start(self.c)
+        info("Pidbox started")
 
     def _close_channel(self, c):
         if self.node and self.node.channel:
