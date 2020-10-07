@@ -47,20 +47,20 @@ class Pidbox(object):
             self.node.handle_message(body, message)
         except KeyError as exc:
             error('No such control command: %s', exc)
-        except Exception as exc:
-            error('Control command error: %r', exc, exc_info=True)
-
-            # log details of errors that may be causing the issue, i.e. kombu.exceptions.OperationalError and/or kombu.exceptions.InconsistencyError
-            if exc.__class__ == OperationalError:
-                error(
-                    'OperationalError was raised with details: body: %s; message: %s',
-                    body, message)
-            elif exc.__class__ == InconsistencyError:
-                error('InconsistencyError was raised with details: body: %s; message: %s', body, message)
-
+        # log details of errors that may be causing the issue,
+        # i.e. kombu.exceptions.OperationalError and/or
+        # kombu.exceptions.InconsistencyError
+        except (OperationalError, InconsistencyError) as exc:
+            error('Updated Control command error: %r', exc, exc_info=True)
+            error(
+                '%s was raised with details: body: %s; message: %s',
+                exc.__class__.__name__, body, message)
             info("Pidbox reset starting %r", self.node)
             self.reset()
             info("Pidbox reset successful %r", self.node)
+        except Exception as exc:
+            error('Control command error: %r', exc, exc_info=True)
+            self.reset()
 
     def start(self, c):
         self.node.channel = c.connection.channel()
